@@ -1,0 +1,273 @@
+{
+  "name": "Traffic",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Target Destination: {{ $node[\"Set\"].json.destination }}\nCurrent Location: {{ $node[\"Set\"].json.incidentLocation }}\nReturn ONLY the JSON object.",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "- ROLE: You are the Senior Logistics Coordinator for the Emergency Control Centre.\n- OBJECTIVE: Calculate critical transport metrics between an incident site and a destination medical facility.\n- INPUT DATA: You will receive a 'destination' and an 'incidentLocation'.\n\n- LOGIC & ESTIMATION PARAMETERS:\n    1. DISTANCE: Estimate the most likely driving distance between the two points based on urban geography.\n    2. ETA: Calculate travel time assuming an average urban emergency response speed of 30-40 km/h.\n    3. TRAFFIC DELAY: Factor in a variable delay (2-15 minutes) based on the complexity of the route or time of day provided in the prompt.\n- BEHAVIORAL CONSTRAINTS:\n    1. Output MUST be a strictly valid JSON object.\n    2. Do NOT provide prose, conversational filler, or explanations of your math.\n    3. If specific coordinates are missing, use central landmarks for the calculation baseline.\n    4. Be decisive. If a range exists, provide the \"Worst Case\" (highest) value to ensure medical readiness.\n\n- OUTPUT SCHEMA (Strictly Enforced):\n{\n  \"eta\": \"string (e.g., '22 mins')\",\n  \"distance\": number (in km),\n  \"trafficDelay\": number (in minutes)\n}",
+          "maxIterations": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bc88494e-307d-45a6-b43d-63319b6b9706",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {},
+      "type": "CUSTOM.zyndAgentPublisher",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "6888683c-34c7-4613-ae07-6fd53053314f",
+      "name": "Zynd Agent Publisher",
+      "notesInFlow": false,
+      "retryOnFail": true,
+      "credentials": {
+        "zyndAiApi": {
+          "id": "GCKj1KX9buDNSph2",
+          "name": "ZyndAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('AI Agent').item.json.output }}",
+        "options": {}
+      },
+      "type": "CUSTOM.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        656,
+        208
+      ],
+      "id": "7423b17c-129f-4433-80c1-824a1e9b7842",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"required\": [\"eta\", \"distance\", \"trafficDelay\"],\n  \"properties\": {\n    \"eta\": { \"type\": \"string\", \"description\": \"e.g., '14 mins'\" },\n    \"distance\": { \"type\": \"number\", \"description\": \"Distance in km\" },\n    \"trafficDelay\": { \"type\": \"number\", \"description\": \"Delay in minutes\" }\n  }\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        176,
+        272
+      ],
+      "id": "fb805c74-1bea-41c4-aded-67a6c1ae58d7",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"destination\": \"{{ $json.body.address || 'Apollo Hospital, Greams Road, Chennai' }}\",\n  \"incidentLocation\": \"{{ $json.body.startPoint || 'Current Location' }}\",\n  \"country\": \"India\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -208,
+        80
+      ],
+      "id": "5948f649-3350-475f-8e95-4447d7a1999e",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        384
+      ],
+      "id": "29b48359-2c60-4104-845f-426bb2b05e1d",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "dvN5g1jhqA1cngll",
+          "name": "OpenAi account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "responseMode": "responseNode",
+        "serverWalletAddress": "0x72a3D04dbA1E1ff3C818CB26d259B9e765d20ed1",
+        "price": "$0",
+        "options": {}
+      },
+      "type": "CUSTOM.zyndX402Webhook",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        208
+      ],
+      "id": "ff1ac47d-9d86-4128-a761-c61e3aae79cf",
+      "name": "X402 Webhook",
+      "webhookId": "256ee585-23a7-4df4-bceb-0b89618eb5b9"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        208
+      ],
+      "id": "0c28bedf-8e35-4ffe-9064-1ff7e666cfdd",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "EsWR8sRcDugARcYG",
+          "name": "Google Gemini(PaLM) Api account 9"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        304
+      ],
+      "id": "94201e03-2e98-44c5-9ec4-a18188a4019b",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "EsWR8sRcDugARcYG",
+          "name": "Google Gemini(PaLM) Api account 9"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Zynd Agent Publisher": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Zynd Agent Publisher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "X402 Webhook": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "85e5be93-c9d0-41b3-9518-471818c79b16",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f58e9065c09e44830cdc01e4b503b188a6ba960f9457b74e4a9076b993d1dcff"
+  },
+  "id": "LOKGUn262xaU_sKdJBW2u",
+  "tags": []
+}

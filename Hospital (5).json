@@ -1,0 +1,206 @@
+{
+  "name": "Hospital",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "= {{ $json.prompt }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": " ROLE: You are an Expert Medical Facility Dispatcher.\n- TASK: Identify the best hospital based on the injury type and location provided.\n- CONSTRAINTS: \n  1. You must output ONLY a valid JSON object.\n  2. Do not include any conversational text, headers like \"Incident:\", or triple backticks (```).\n  3. Adhere strictly to the FacilityRecommendation schema.\n  4. If multiple hospitals fit, choose the one with the highest specialty match.\n  5. If no match is found, use \"Unknown\" for names and 0.3 for confidence.\n\"CRITICAL: You are an API endpoint. You must ONLY output a raw JSON object. Do not include 'Here is your recommendation' or any other words.\n\nExample of required output:\n{\n\"hospitalName\": \"City General\",\n\"address\": \"123 Health St\",\n\"specialty\": \"Trauma\",\n\"confidence\": 0.95\n}\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        -128
+      ],
+      "id": "38496abf-a0b8-462c-b276-e1c125f755c2",
+      "name": "AI Agent",
+      "alwaysOutputData": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {},
+      "type": "CUSTOM.zyndAgentPublisher",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        -80
+      ],
+      "id": "7a7ae3d8-1779-4ee1-8b75-e5bd9c31f3c5",
+      "name": "Zynd Agent Publisher",
+      "executeOnce": false,
+      "retryOnFail": true,
+      "credentials": {
+        "zyndAiApi": {
+          "id": "Y3o0IfDteWPJ4aXO",
+          "name": "zyndTech"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $node[\"AI Agent\"].json.output }}",
+        "options": {}
+      },
+      "type": "CUSTOM.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1248,
+        -112
+      ],
+      "id": "e8567902-2491-48a0-99cb-5bf1e50d6320",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -80
+      ],
+      "id": "24552313-cbb5-4626-8880-b4f1c254c3b5",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "responseMode": "responseNode",
+        "serverWalletAddress": "0x72a3D04dbA1E1ff3C818CB26d259B9e765d20ed1",
+        "price": "$0",
+        "options": {}
+      },
+      "type": "CUSTOM.zyndX402Webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cd5bda71-bbe9-46ad-957a-14ed046e56ee",
+      "name": "X402 Webhook",
+      "webhookId": "8368ef49-5e1a-407b-9f56-6b6d6fa83b93"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        288,
+        112
+      ],
+      "id": "c65c83ce-6185-488c-85a9-37ffb34d9420",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QuWkYGc8c3RRJpUy",
+          "name": "Google Gemini(PaLM) Api account 8"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-07/schema#\",\n  \"title\": \"FacilityRecommendation\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"hospitalName\": {\n      \"type\": \"string\",\n      \"description\": \"Full name of the recommended hospital\"\n    },\n    \"address\": {\n      \"type\": \"string\",\n      \"description\": \"Full postal address of the recommended hospital\"\n    },\n    \"specialty\": {\n      \"type\": \"string\",\n      \"description\": \"Primary specialty or department relevant to the injury\"\n    },\n    \"confidence\": {\n      \"type\": \"number\",\n      \"minimum\": 0,\n      \"maximum\": 1,\n      \"description\": \"Confidence score between 0 and 1; use 0.3 for fallback/no-match\"\n    }\n  },\n  \"required\": [\n    \"hospitalName\",\n    \"address\",\n    \"specialty\",\n    \"confidence\"\n  ],\n  \"additionalProperties\": false\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        672,
+        80
+      ],
+      "id": "99601321-e8b0-49c2-8992-6d0d492cc40b",
+      "name": "Structured Output Parser"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Zynd Agent Publisher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zynd Agent Publisher": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "X402 Webhook": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "739588bc-1d82-425d-b3e6-0140af52125b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f58e9065c09e44830cdc01e4b503b188a6ba960f9457b74e4a9076b993d1dcff"
+  },
+  "id": "6nJTxpH3fJZ2I-cjAuzlo",
+  "tags": []
+}
